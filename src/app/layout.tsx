@@ -7,10 +7,6 @@ import {
   IconGauge,
   IconUser,
   IconShield,
-  IconUserSearch,
-  IconAlertTriangle,
-  IconLayersSubtract,
-  IconSettings,
 } from "@tabler/icons-react";
 
 import { ReactNode } from "react";
@@ -37,23 +33,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             />
             <SidebarLink
               link={{
-                label: "Real-time Alerts",
-                href: "/alerts",
-                icon: <IconShield size={18} />,
-              }}
-            />
-            <SidebarLink
-              link={{
                 label: "Collection Check",
                 href: "/collection-check",
                 icon: <IconShield size={18} />,
-              }}
-            />
-            <SidebarLink
-              link={{
-                label: "Settings",
-                href: "/settings",
-                icon: <IconUser size={18} />,
               }}
             />
           </SidebarBody>
