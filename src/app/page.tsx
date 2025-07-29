@@ -26,26 +26,66 @@ export default function WalletScannerPage() {
   };
 
   
-  const runScan = (inputAddress: string) => {
+  const runScan = async (inputAddress: string) => {
     setLoading(true);
     setResult(null);
 
-    
-    const testAddress = "0x1234567890abcdef1234567890abcdef12345678";
+    try {
+      const response = await fetch('/api/wallet-scan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ address: inputAddress }),
+      });
 
-    setTimeout(() => {
-      setLoading(false);
-      if (inputAddress.toLowerCase() === testAddress.toLowerCase()) {
-        alert("Test address detected!");
-        setResult("This is a test address with no risk.");
-      } else if (!inputAddress || inputAddress.length !== 42) {
-        alert("Please enter a valid Ethereum address.");
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to analyze wallet');
         setResult(null);
-      } else {
-        // Simulated result for other addresses
-        setResult("This wallet has 3 risky tokens and 1 flagged NFT.");
+        return;
       }
-    }, 2000);
+
+      // Format the analysis result
+      let resultText = `📊 Wallet Analysis Results:\n\n`;
+      resultText += `Address: ${data.address}\n`;
+      resultText += `ETH Balance: ${parseFloat(data.ethBalance).toFixed(4)} ETH\n`;
+      resultText += `Risk Level: ${data.riskLevel.toUpperCase()}\n`;
+      resultText += `Risk Score: ${data.riskScore}/100\n\n`;
+      
+      if (data.tokens.length > 0) {
+        resultText += `🪙 Tokens Found (${data.tokens.length}):\n`;
+        data.tokens.forEach((token: any) => {
+          resultText += `• ${token.symbol}: ${parseFloat(token.balance).toFixed(2)} (${token.riskLevel})\n`;
+          if (token.riskFactors.length > 0) {
+            resultText += `  ⚠️ ${token.riskFactors.join(', ')}\n`;
+          }
+        });
+        resultText += '\n';
+      }
+      
+      if (data.nfts.length > 0) {
+        resultText += `🖼️ NFTs Found (${data.nfts.length}):\n`;
+        data.nfts.forEach((nft: any) => {
+          resultText += `• ${nft.name} (${nft.riskLevel})\n`;
+          if (nft.riskFactors.length > 0) {
+            resultText += `  ⚠️ ${nft.riskFactors.join(', ')}\n`;
+          }
+        });
+        resultText += '\n';
+      }
+      
+      resultText += `Summary: ${data.summary}`;
+      setResult(resultText);
+
+    } catch (error) {
+      console.error('Error scanning wallet:', error);
+      alert('Failed to analyze wallet. Please try again.');
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleScanClick = () => {

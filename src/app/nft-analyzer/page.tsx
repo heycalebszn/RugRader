@@ -25,28 +25,71 @@ export default function NftAnalyzerPage() {
     setTokenId(e.target.value);
   };
 
-  const runNftAnalysis = () => {
+  const runNftAnalysis = async () => {
     setLoading(true);
     setResult(null);
 
-    // Simulate API Mock response
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/nft-analyzer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          contractAddress: contractAddress,
+          tokenId: tokenId 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to analyze NFT');
+        return;
+      }
+
+      // Format the NFT analysis result
+      let resultText = `🖼️ NFT Analysis Results\n\n`;
+      resultText += `Name: ${data.name}\n`;
+      resultText += `Collection: ${data.metadata?.collection || 'Unknown'}\n`;
+      resultText += `Contract: ${data.contractAddress}\n`;
+      resultText += `Token ID: ${data.tokenId}\n`;
+      resultText += `Risk Level: ${data.riskLevel.toUpperCase()}\n\n`;
+      
+      if (data.description) {
+        resultText += `Description: ${data.description}\n\n`;
+      }
+      
+      resultText += `🔍 Verification Status:\n`;
+      resultText += `• Collection Verified: ${data.metadata?.verified ? '✅ Yes' : '❌ No'}\n`;
+      resultText += `• Metadata Accessible: ${data.metadata ? '✅ Yes' : '❌ No'}\n`;
+      
+      if (data.metadata?.owner) {
+        resultText += `• Current Owner: ${data.metadata.owner.slice(0, 6)}...${data.metadata.owner.slice(-4)}\n`;
+      }
+      
+      resultText += '\n';
+      
+      if (data.riskFactors.length > 0) {
+        resultText += `⚠️ Risk Factors:\n`;
+        data.riskFactors.forEach((factor: string) => {
+          resultText += `• ${factor}\n`;
+        });
+      } else {
+        resultText += `✅ No significant risk factors detected\n`;
+        resultText += `• Metadata verified\n`;
+        resultText += `• No suspicious trading patterns\n`;
+        resultText += `• Collection appears legitimate\n`;
+      }
+
+      setResult(resultText);
+
+    } catch (error) {
+      console.error('Error analyzing NFT:', error);
+      alert('Failed to analyze NFT. Please try again.');
+    } finally {
       setLoading(false);
-
-      if (!contractAddress || contractAddress.length !== 42) {
-        alert("Please enter a valid Ethereum contract address.");
-        return;
-      }
-
-      if (!tokenId || isNaN(Number(tokenId))) {
-        alert("Please enter a valid token ID.");
-        return;
-      }
-
-      setResult(
-        `✅ Token ${tokenId} from ${contractAddress} appears to be safe.\n\n• Metadata verified\n• No wash trading detected\n• Listed in 3 major marketplaces`
-      );
-    }, 2000);
+    }
   };
 
   return (
