@@ -11,7 +11,11 @@ import {
   WalletAnalysis,
   calculateWalletRiskScore,
   analyzeTokenRisk,
+  analyzeNFTRisk,
   fetchTokenPrice,
+  getWalletTokens,
+  getWalletNFTs,
+  fetchNFTMetadata,
   KNOWN_SAFE_TOKENS
 } from '@/lib/blockchain';
 
@@ -27,17 +31,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For demo purposes, we'll use mock data initially
-    // In production, uncomment the lines below to use real blockchain data
-    // const provider = getProvider();
-    // const ethBalance = await provider.getBalance(address);
-    // const ethBalanceFormatted = formatEther(ethBalance);
+    console.log(`Starting wallet analysis for address: ${address}`);
+
+    // Get real blockchain data
+    const provider = getProvider();
+    const ethBalance = await provider.getBalance(address);
+    const ethBalanceFormatted = formatEther(ethBalance);
     
-    const ethBalanceFormatted = "0.0000"; // Mock balance
+    console.log(`ETH Balance: ${ethBalanceFormatted} ETH`);
     
-    // Analyze tokens and NFTs in the wallet (using mock data for demo)
-    const tokens = await analyzeWalletTokens(null, address);
-    const nfts = await analyzeWalletNFTs(null, address);
+    // Analyze tokens and NFTs in the wallet using real data
+    const tokens = await analyzeWalletTokens(provider, address);
+    const nfts = await analyzeWalletNFTs(provider, address);
 
     // Calculate risk score
     const riskScore = calculateWalletRiskScore(tokens, nfts);
@@ -65,6 +70,7 @@ export async function POST(request: NextRequest) {
       summary
     };
 
+    console.log(`Analysis complete. Found ${tokens.length} tokens and ${nfts.length} NFTs`);
     return NextResponse.json(analysis);
 
   } catch (error) {
@@ -76,66 +82,115 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function analyzeWalletTokens(provider: ethers.JsonRpcProvider | null, walletAddress: string): Promise<TokenInfo[]> {
+async function analyzeWalletTokens(provider: ethers.JsonRpcProvider, walletAddress: string): Promise<TokenInfo[]> {
   const tokens: TokenInfo[] = [];
   
   try {
-    // In a production app, you'd use APIs like Moralis, Alchemy, or Etherscan 
-    // to get all token balances. For this demo, we'll check some common tokens.
-    const commonTokens = [
-      '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
-      '0xA0b86a33E6441E78ca8E27d0e7C8b1c8B8b8b8b8', // USDC (example)
-      '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI
-    ];
+    console.log('Fetching wallet tokens...');
+    
+    // First try to get tokens from external APIs (Moralis/Alchemy)
+    const externalTokens = await getWalletTokens(walletAddress);
+    
+    if (externalTokens.length > 0) {
+      console.log(`Found ${externalTokens.length} tokens from external API`);
+      
+      for (const tokenData of externalTokens.slice(0, 20)) { // Limit to first 20 tokens
+        try {
+          const tokenAddress = tokenData.token_address || tokenData.contractAddress;
+          if (!tokenAddress) continue;
 
-    for (const tokenAddress of commonTokens) {
-      try {
-        const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-        const balance = await contract.balanceOf(walletAddress);
-        
-        if (balance > 0n) {
-          const name = await contract.name();
-          const symbol = await contract.symbol();
-          const decimals = await contract.decimals();
+          const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+          
+          // Get token details
+          const [name, symbol, decimals] = await Promise.all([
+            contract.name().catch(() => tokenData.name || 'Unknown'),
+            contract.symbol().catch(() => tokenData.symbol || 'UNK'),
+            contract.decimals().catch(() => tokenData.decimals || 18)
+          ]);
+
+          // Format balance
+          const balance = tokenData.balance || tokenData.value || '0';
           const formattedBalance = ethers.formatUnits(balance, decimals);
           
-          // Analyze risk factors
-          const riskFactors = analyzeTokenRisk(tokenAddress, { name, symbol });
-          const riskLevel = KNOWN_SAFE_TOKENS.has(tokenAddress.toLowerCase()) ? 'low' : 
-                           riskFactors.length >= 2 ? 'high' : 
-                           riskFactors.length >= 1 ? 'medium' : 'low';
+          if (parseFloat(formattedBalance) > 0) {
+            // Analyze risk factors
+            const riskFactors = analyzeTokenRisk(tokenAddress, { name, symbol });
+            const riskLevel = KNOWN_SAFE_TOKENS.has(tokenAddress.toLowerCase()) ? 'low' : 
+                             riskFactors.length >= 2 ? 'high' : 
+                             riskFactors.length >= 1 ? 'medium' : 'low';
 
-          // Try to get price data
-          const price = await fetchTokenPrice(tokenAddress);
+            // Try to get price data
+            const price = await fetchTokenPrice(tokenAddress);
 
-          tokens.push({
-            address: tokenAddress,
-            name,
-            symbol,
-            decimals,
-            balance: formattedBalance,
-            price,
-            riskLevel,
-            riskFactors
-          });
+            tokens.push({
+              address: tokenAddress,
+              name,
+              symbol,
+              decimals,
+              balance: formattedBalance,
+              price,
+              riskLevel,
+              riskFactors
+            });
+
+            console.log(`Added token: ${symbol} (${formattedBalance})`);
+          }
+        } catch (error) {
+          console.error(`Error analyzing token:`, error);
+          continue;
         }
-      } catch (error) {
-        console.error(`Error analyzing token ${tokenAddress}:`, error);
-        // Continue with other tokens
       }
-    }
+    } else {
+      // Fallback: Check some common tokens manually
+      console.log('No external API data available, checking common tokens...');
+      const commonTokens = [
+        '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
+        '0xA0b86a33E6441E78ca8E27d0e7C8b1c8B8b8b8b8', // USDC
+        '0x6B175474E89094C44Da98b954EedeAC495271d0F', // DAI
+        '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
+      ];
 
-    // Add some mock risky tokens for demonstration
-    if (walletAddress.toLowerCase() !== '0x1234567890abcdef1234567890abcdef12345678') {
-      tokens.push({
-        address: '0x1234567890abcdef1234567890abcdef12345678',
-        name: 'SuspiciousToken',
-        symbol: 'SCAM',
-        decimals: 18,
-        balance: '1000.0',
-        riskLevel: 'high',
-        riskFactors: ['Unverified contract', 'No liquidity', 'Recent creation']
-      });
+      for (const tokenAddress of commonTokens) {
+        try {
+          const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+          const balance = await contract.balanceOf(walletAddress);
+          
+          if (balance > 0n) {
+            const [name, symbol, decimals] = await Promise.all([
+              contract.name(),
+              contract.symbol(),
+              contract.decimals()
+            ]);
+            
+            const formattedBalance = ethers.formatUnits(balance, decimals);
+            
+            // Analyze risk factors
+            const riskFactors = analyzeTokenRisk(tokenAddress, { name, symbol });
+            const riskLevel = KNOWN_SAFE_TOKENS.has(tokenAddress.toLowerCase()) ? 'low' : 
+                             riskFactors.length >= 2 ? 'high' : 
+                             riskFactors.length >= 1 ? 'medium' : 'low';
+
+            // Try to get price data
+            const price = await fetchTokenPrice(tokenAddress);
+
+            tokens.push({
+              address: tokenAddress,
+              name,
+              symbol,
+              decimals,
+              balance: formattedBalance,
+              price,
+              riskLevel,
+              riskFactors
+            });
+
+            console.log(`Found common token: ${symbol} (${formattedBalance})`);
+          }
+        } catch (error) {
+          console.error(`Error checking common token ${tokenAddress}:`, error);
+          continue;
+        }
+      }
     }
 
   } catch (error) {
@@ -145,41 +200,59 @@ async function analyzeWalletTokens(provider: ethers.JsonRpcProvider | null, wall
   return tokens;
 }
 
-async function analyzeWalletNFTs(provider: ethers.JsonRpcProvider | null, walletAddress: string): Promise<NFTInfo[]> {
+async function analyzeWalletNFTs(provider: ethers.JsonRpcProvider, walletAddress: string): Promise<NFTInfo[]> {
   const nfts: NFTInfo[] = [];
   
   try {
-    // In production, you'd use APIs to get all NFTs for a wallet
-    // For this demo, we'll add some mock NFT analysis
+    console.log('Fetching wallet NFTs...');
     
-    // Mock some NFT analysis results
-    nfts.push({
-      contractAddress: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
-      tokenId: '1234',
-      name: 'Bored Ape #1234',
-      description: 'A Bored Ape Yacht Club NFT',
-      riskLevel: 'low',
-      riskFactors: [],
-      metadata: {
-        verified: true,
-        collection: 'Bored Ape Yacht Club'
-      }
-    });
+    // Get NFTs from external APIs (Moralis/Alchemy)
+    const externalNFTs = await getWalletNFTs(walletAddress);
+    
+    if (externalNFTs.length > 0) {
+      console.log(`Found ${externalNFTs.length} NFTs from external API`);
+      
+      for (const nftData of externalNFTs.slice(0, 10)) { // Limit to first 10 NFTs
+        try {
+          const contractAddress = nftData.token_address || nftData.contract?.address;
+          const tokenId = nftData.token_id || nftData.tokenId;
+          
+          if (!contractAddress || !tokenId) continue;
 
-    // Add a flagged NFT for demonstration
-    if (walletAddress.toLowerCase() !== '0x1234567890abcdef1234567890abcdef12345678') {
-      nfts.push({
-        contractAddress: '0x1111111111111111111111111111111111111111',
-        tokenId: '999',
-        name: 'Suspicious NFT',
-        description: 'This NFT has been flagged',
-        riskLevel: 'high',
-        riskFactors: ['Reported as stolen', 'Suspicious metadata'],
-        metadata: {
-          verified: false,
-          flagged: true
+          // Get metadata
+          let metadata = nftData.metadata;
+          if (!metadata && nftData.token_uri) {
+            metadata = await fetchNFTMetadata(nftData.token_uri);
+          }
+
+          // Analyze risk factors
+          const riskFactors = analyzeNFTRisk(nftData, metadata);
+          const riskLevel = riskFactors.length >= 3 ? 'high' : 
+                           riskFactors.length >= 1 ? 'medium' : 'low';
+
+          nfts.push({
+            contractAddress,
+            tokenId: tokenId.toString(),
+            name: metadata?.name || nftData.name || `NFT #${tokenId}`,
+            description: metadata?.description || nftData.description || 'No description available',
+            image: metadata?.image || metadata?.image_url,
+            riskLevel,
+            riskFactors,
+            metadata: {
+              ...metadata,
+              collection: nftData.collection?.name || 'Unknown Collection',
+              verified: nftData.collection?.verified || false
+            }
+          });
+
+          console.log(`Added NFT: ${metadata?.name || `#${tokenId}`}`);
+        } catch (error) {
+          console.error(`Error analyzing NFT:`, error);
+          continue;
         }
-      });
+      }
+    } else {
+      console.log('No NFTs found for this wallet');
     }
 
   } catch (error) {
