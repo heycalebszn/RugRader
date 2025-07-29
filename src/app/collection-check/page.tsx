@@ -14,26 +14,65 @@ export default function CollectionCheckPage() {
     setContract(e.target.value);
   };
 
-  const runCheck = () => {
+  const runCheck = async () => {
     setLoading(true);
     setResult(null);
 
-    setTimeout(() => {
-      setLoading(false);
-      if (!contract || contract.length !== 42) {
-        alert("Enter a valid Ethereum contract address.");
+    try {
+      const response = await fetch('/api/collection-check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contractAddress: contract }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to analyze collection');
         return;
       }
 
-      setResult(`📊 Risk Summary for ${contract}
+      // Format the collection analysis result
+      let resultText = `📊 Risk Summary for ${data.name || 'Collection'}\n`;
+      resultText += `Contract: ${data.contractAddress}\n\n`;
+      
+      resultText += `📈 Collection Stats:\n`;
+      resultText += `• Total Supply: ${data.totalSupply.toLocaleString()}\n`;
+      resultText += `• Unique Holders: ${data.holderCount.toLocaleString()}\n`;
+      if (data.floorPrice) {
+        resultText += `• Floor Price: ${data.floorPrice.toFixed(3)} ETH\n`;
+      }
+      resultText += `• Audit Status: ${data.auditStatus === 'passed' ? '✅ Passed' : 
+                                        data.auditStatus === 'failed' ? '❌ Failed' : '❓ Unknown'}\n`;
+      resultText += `• Risk Level: ${data.riskLevel.toUpperCase()}\n\n`;
+      
+      if (data.topHolders.length > 0) {
+        resultText += `🐋 Top Holders:\n`;
+        data.topHolders.forEach((holder: any, index: number) => {
+          resultText += `${index + 1}. ${holder.address.slice(0, 6)}...${holder.address.slice(-4)}: ${holder.count} tokens (${holder.percentage.toFixed(1)}%)\n`;
+        });
+        resultText += '\n';
+      }
+      
+      if (data.riskFactors.length > 0) {
+        resultText += `⚠️ Risk Factors:\n`;
+        data.riskFactors.forEach((factor: string) => {
+          resultText += `• ${factor}\n`;
+        });
+      } else {
+        resultText += `✅ No significant risk factors detected\n`;
+      }
 
-• Floor Price Volatility: High 🔺
-• Flagged Tokens: 12 out of 5000 (0.24%)
-• Audit Status: ✅ Passed
-• Top 5 Holders own 68% of supply 🐋
-• Wash Trading Risk: ⚠️ Medium
-• Listed on OpenSea, Blur, LooksRare`);
-    }, 2000);
+      setResult(resultText);
+
+    } catch (error) {
+      console.error('Error analyzing collection:', error);
+      alert('Failed to analyze collection. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
