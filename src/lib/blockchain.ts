@@ -477,7 +477,7 @@ export function analyzeTokenRisk(tokenAddress: string, tokenInfo: any): string[]
 }
 
 // Enhanced NFT risk analysis
-export function analyzeNFTRisk(nftData: any, metadata: any): string[] {
+export function analyzeBasicNFTRisk(nftData: any, metadata: any): string[] {
   const riskFactors: string[] = [];
   
   // Check metadata integrity
@@ -504,4 +504,389 @@ export function analyzeNFTRisk(nftData: any, metadata: any): string[] {
   }
   
   return riskFactors;
+}
+
+/**
+ * Enhanced NFT risk analysis using BitScrunch forensic data
+ * Combines traditional blockchain analysis with AI-powered insights
+ */
+export async function analyzeNFTRisk(nftData: any, metadata: any, contractAddress: string, tokenId: string): Promise<string[]> {
+  const riskFactors: string[] = [];
+  
+  // Start with basic risk analysis
+  const basicRisks = analyzeBasicNFTRisk(nftData, metadata);
+  riskFactors.push(...basicRisks);
+  
+  try {
+    // Get BitScrunch comprehensive analysis
+    const bitScrunchAnalysis = await analyzeBitScrunchNFT(contractAddress, tokenId);
+    
+    if (bitScrunchAnalysis) {
+      // Add trading pattern risks
+      if (bitScrunchAnalysis.forensicData.tradingPatterns.isWashTrading) {
+        riskFactors.push('Wash trading detected by BitScrunch AI');
+      }
+      
+      if (bitScrunchAnalysis.forensicData.tradingPatterns.volumeManipulation) {
+        riskFactors.push('Volume manipulation detected');
+      }
+      
+      if (bitScrunchAnalysis.forensicData.tradingPatterns.rapidTransfers) {
+        riskFactors.push('Suspicious rapid transfer patterns');
+      }
+      
+      // Add IP infringement risks
+      if (bitScrunchAnalysis.forensicData.ipInfringement.isInfringing) {
+        riskFactors.push(`Potential IP infringement (${bitScrunchAnalysis.forensicData.ipInfringement.similarityScore}% similarity)`);
+      }
+      
+      // Add metadata authenticity risks
+      if (!bitScrunchAnalysis.forensicData.metadata.isAuthentic) {
+        riskFactors.push('Metadata authenticity questioned by BitScrunch analysis');
+      }
+      
+      if (bitScrunchAnalysis.forensicData.metadata.hasManipulation) {
+        riskFactors.push('Metadata manipulation detected');
+      }
+      
+      // Add wallet behavior risks
+      if (bitScrunchAnalysis.walletBehavior.ownerRiskScore > 70) {
+        riskFactors.push('High-risk wallet owner detected');
+      }
+      
+      // Add price estimation confidence
+      if (bitScrunchAnalysis.forensicData.priceEstimation.confidence < 0.3) {
+        riskFactors.push('Low price estimation confidence - volatile or manipulated market');
+      }
+    }
+    
+    // Get additional trading pattern analysis
+    const tradingPatterns = await analyzeBitScrunchTradingPatterns(contractAddress, tokenId);
+    
+    if (tradingPatterns) {
+      if (tradingPatterns.priceManipulation) {
+        riskFactors.push('Price manipulation patterns detected');
+      }
+      
+      if (tradingPatterns.suspiciousTimingPatterns) {
+        riskFactors.push('Suspicious trading timing patterns');
+      }
+      
+      if (tradingPatterns.crossPlatformArbitrage) {
+        riskFactors.push('Cross-platform arbitrage activity detected');
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error during BitScrunch analysis:', error);
+    riskFactors.push('Unable to complete advanced forensic analysis');
+  }
+  
+  return riskFactors;
+}
+
+// BitScrunch API Integration
+// BitScrunch is the hackathon sponsor providing advanced NFT analytics and forensic data
+export interface BitScrunchConfig {
+  apiKey?: string;
+  baseUrl: string;
+  network: 'mainnet' | 'testnet';
+}
+
+export interface BitScrunchNFTAnalysis {
+  contractAddress: string;
+  tokenId: string;
+  riskScore: number;
+  forensicData: {
+    tradingPatterns: {
+      isWashTrading: boolean;
+      suspiciousTransactions: number;
+      volumeManipulation: boolean;
+      rapidTransfers: boolean;
+    };
+    priceEstimation: {
+      estimatedValue: number;
+      confidence: number;
+      methodology: string;
+    };
+    ipInfringement: {
+      isInfringing: boolean;
+      similarityScore: number;
+      originalWork?: string;
+    };
+    metadata: {
+      isAuthentic: boolean;
+      hasManipulation: boolean;
+      storageType: 'ipfs' | 'centralized' | 'onchain';
+    };
+  };
+  walletBehavior: {
+    ownerRiskScore: number;
+    tradingHistory: any[];
+    suspiciousActivity: string[];
+  };
+}
+
+export interface BitScrunchTradingPatterns {
+  washTradingDetected: boolean;
+  volumeManipulation: boolean;
+  priceManipulation: boolean;
+  rapidSuccessiveTransfers: boolean;
+  suspiciousTimingPatterns: boolean;
+  crossPlatformArbitrage: boolean;
+}
+
+// BitScrunch API configuration
+const BITSCRUNCH_CONFIG: BitScrunchConfig = {
+  apiKey: process.env.BITSCRUNCH_API_KEY,
+  baseUrl: process.env.BITSCRUNCH_API_URL || 'https://api.bitscrunch.com',
+  network: (process.env.NODE_ENV === 'production' ? 'mainnet' : 'testnet') as 'mainnet' | 'testnet'
+};
+
+/**
+ * Analyze NFT using BitScrunch advanced AI analytics
+ * Provides comprehensive forensic analysis, price estimation, and IP infringement detection
+ */
+export async function analyzeBitScrunchNFT(
+  contractAddress: string, 
+  tokenId: string
+): Promise<BitScrunchNFTAnalysis | null> {
+  if (!BITSCRUNCH_CONFIG.apiKey) {
+    console.warn('BitScrunch API key not configured, using fallback analysis');
+    return null;
+  }
+
+  return withRetry(async () => {
+    try {
+      const response = await axios.post(
+        `${BITSCRUNCH_CONFIG.baseUrl}/v1/nft/analyze`,
+        {
+          contractAddress,
+          tokenId,
+          network: BITSCRUNCH_CONFIG.network,
+          includeForensics: true,
+          includePriceEstimation: true,
+          includeIPAnalysis: true,
+          includeWalletBehavior: true
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${BITSCRUNCH_CONFIG.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        throw new Error('BitScrunch API rate limit exceeded');
+      }
+      if (error.response?.status === 401) {
+        throw new Error('Invalid BitScrunch API key');
+      }
+      throw error;
+    }
+  }, 3, 2000).catch((error) => {
+    console.error('BitScrunch NFT analysis failed:', error);
+    return null;
+  });
+}
+
+/**
+ * Analyze trading patterns using BitScrunch forensic capabilities
+ * Detects wash trading, volume manipulation, and other suspicious activities
+ */
+export async function analyzeBitScrunchTradingPatterns(
+  contractAddress: string,
+  tokenId: string
+): Promise<BitScrunchTradingPatterns | null> {
+  if (!BITSCRUNCH_CONFIG.apiKey) {
+    console.warn('BitScrunch API key not configured, using basic pattern analysis');
+    return null;
+  }
+
+  return withRetry(async () => {
+    try {
+      const response = await axios.post(
+        `${BITSCRUNCH_CONFIG.baseUrl}/v1/trading/patterns`,
+        {
+          contractAddress,
+          tokenId,
+          network: BITSCRUNCH_CONFIG.network,
+          analysisDepth: 'comprehensive',
+          timeFrame: '90d' // Analyze last 90 days
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${BITSCRUNCH_CONFIG.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 25000
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        throw new Error('BitScrunch API rate limit exceeded');
+      }
+      throw error;
+    }
+  }, 3, 2000).catch((error) => {
+    console.error('BitScrunch trading pattern analysis failed:', error);
+    return null;
+  });
+}
+
+/**
+ * Get BitScrunch AI-powered NFT price estimation
+ * Uses advanced machine learning models trained on multi-chain NFT data
+ */
+export async function getBitScrunchPriceEstimation(
+  contractAddress: string,
+  tokenId: string
+): Promise<{ estimatedValue: number; confidence: number; methodology: string } | null> {
+  if (!BITSCRUNCH_CONFIG.apiKey) {
+    console.warn('BitScrunch API key not configured, skipping price estimation');
+    return null;
+  }
+
+  return withRetry(async () => {
+    try {
+      const response = await axios.get(
+        `${BITSCRUNCH_CONFIG.baseUrl}/v1/nft/price-estimation`,
+        {
+          params: {
+            contractAddress,
+            tokenId,
+            network: BITSCRUNCH_CONFIG.network
+          },
+          headers: {
+            'Authorization': `Bearer ${BITSCRUNCH_CONFIG.apiKey}`
+          },
+          timeout: 20000
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return { estimatedValue: 0, confidence: 0, methodology: 'insufficient_data' };
+      }
+      throw error;
+    }
+  }, 2, 1500).catch((error) => {
+    console.error('BitScrunch price estimation failed:', error);
+    return null;
+  });
+}
+
+/**
+ * Analyze wallet behavior using BitScrunch gaming and trading analytics
+ * Provides insights into user acquisition and wallet patterns
+ */
+export async function analyzeBitScrunchWalletBehavior(
+  walletAddress: string
+): Promise<{
+  riskScore: number;
+  tradingPatterns: string[];
+  gamingActivity: boolean;
+  suspiciousActivity: string[];
+} | null> {
+  if (!BITSCRUNCH_CONFIG.apiKey) {
+    console.warn('BitScrunch API key not configured, skipping wallet behavior analysis');
+    return null;
+  }
+
+  return withRetry(async () => {
+    try {
+      const response = await axios.post(
+        `${BITSCRUNCH_CONFIG.baseUrl}/v1/wallet/behavior`,
+        {
+          walletAddress,
+          network: BITSCRUNCH_CONFIG.network,
+          includeGamingAnalytics: true,
+          includeTradingPatterns: true,
+          timeFrame: '30d'
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${BITSCRUNCH_CONFIG.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 25000
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return {
+          riskScore: 0,
+          tradingPatterns: [],
+          gamingActivity: false,
+          suspiciousActivity: []
+        };
+      }
+      throw error;
+    }
+  }, 2, 2000).catch((error) => {
+    console.error('BitScrunch wallet behavior analysis failed:', error);
+    return null;
+  });
+}
+
+/**
+ * Check for IP infringement using BitScrunch AI models
+ * Protects intellectual property rights for creators and brands
+ */
+export async function checkBitScrunchIPInfringement(
+  imageUrl: string,
+  contractAddress: string
+): Promise<{
+  isInfringing: boolean;
+  similarityScore: number;
+  originalWork?: string;
+  confidence: number;
+} | null> {
+  if (!BITSCRUNCH_CONFIG.apiKey) {
+    console.warn('BitScrunch API key not configured, skipping IP infringement check');
+    return null;
+  }
+
+  return withRetry(async () => {
+    try {
+      const response = await axios.post(
+        `${BITSCRUNCH_CONFIG.baseUrl}/v1/ip/check`,
+        {
+          imageUrl,
+          contractAddress,
+          network: BITSCRUNCH_CONFIG.network
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${BITSCRUNCH_CONFIG.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        }
+      );
+
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return {
+          isInfringing: false,
+          similarityScore: 0,
+          confidence: 0
+        };
+      }
+      throw error;
+    }
+  }, 2, 2000).catch((error) => {
+    console.error('BitScrunch IP infringement check failed:', error);
+    return null;
+  });
 }
