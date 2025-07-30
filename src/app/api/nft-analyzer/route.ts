@@ -7,7 +7,11 @@ import {
   ERC721_ABI,
   NFTInfo,
   fetchNFTMetadata,
-  analyzeNFTRisk
+  analyzeNFTRisk,
+  analyzeBitScrunchTradingPatterns,
+  getBitScrunchPriceEstimation,
+  checkBitScrunchIPInfringement,
+  analyzeBitScrunchWalletBehavior
 } from '@/lib/blockchain';
 
 export async function POST(request: NextRequest) {
@@ -151,72 +155,35 @@ async function analyzeNFTRiskFactors(
   const riskFactors: string[] = [];
 
   try {
-    console.log('Analyzing NFT risk factors...');
+    console.log('Analyzing NFT risk factors with BitScrunch integration...');
 
-    // Check metadata validity and integrity
-    if (!metadata) {
-      riskFactors.push('Metadata not accessible or missing');
-    } else {
-      // Check for incomplete metadata
-      if (!metadata.name && !metadata.description) {
-        riskFactors.push('Incomplete metadata (missing name and description)');
-      }
-      
-      // Check for suspicious metadata patterns
-      if (metadata.name && (
-        metadata.name.toLowerCase().includes('test') ||
-        metadata.name.toLowerCase().includes('copy') ||
-        metadata.name.toLowerCase().includes('fake') ||
-        metadata.name.toLowerCase().includes('scam')
-      )) {
-        riskFactors.push('Suspicious NFT name detected');
-      }
-
-      // Check image accessibility
-      if (metadata.image) {
-        if (!metadata.image.startsWith('https://') && 
-            !metadata.image.startsWith('ipfs://') && 
-            !metadata.image.startsWith('data:')) {
-          riskFactors.push('Potentially inaccessible image URL');
-        }
-      } else {
-        riskFactors.push('No image URL found in metadata');
-      }
-
-      // Check for missing or suspicious attributes
-      if (!metadata.attributes && !metadata.traits) {
-        riskFactors.push('No attributes/traits found');
-      }
-    }
-
-    // Check token URI validity
-    if (!tokenURI || tokenURI === '') {
-      riskFactors.push('Missing or empty token URI');
-    } else {
-      if (tokenURI.startsWith('data:')) {
-        // Data URIs might indicate on-chain metadata
-        riskFactors.push('On-chain metadata detected (verify authenticity)');
-      } else if (!tokenURI.startsWith('https://') && !tokenURI.startsWith('ipfs://')) {
-        riskFactors.push('Suspicious token URI format');
-      }
-
-      // Check for centralized hosting concerns
-      if (tokenURI.includes('localhost') || tokenURI.includes('127.0.0.1')) {
-        riskFactors.push('Metadata hosted on localhost (will not be accessible)');
-      }
-    }
+    // Use enhanced BitScrunch-powered risk analysis
+    const enhancedRisks = await analyzeNFTRisk(null, metadata, contractAddress, tokenId);
+    riskFactors.push(...enhancedRisks);
 
     // Check collection reputation
     const collectionRisks = await analyzeCollectionReputation(contractAddress, collectionName);
     riskFactors.push(...collectionRisks);
 
-    // Check ownership patterns
+    // Check ownership patterns with BitScrunch wallet behavior analysis
     const ownershipRisks = await analyzeOwnershipPatterns(contractAddress, tokenId, owner);
     riskFactors.push(...ownershipRisks);
 
-    // Check for potential wash trading or suspicious activity
+    // Use BitScrunch for comprehensive trading pattern analysis
     const tradingRisks = await analyzeTradingPatterns(contractAddress, tokenId);
     riskFactors.push(...tradingRisks);
+
+    // Add BitScrunch IP infringement check if image is available
+    if (metadata?.image) {
+      try {
+        const ipCheck = await checkBitScrunchIPInfringement(metadata.image, contractAddress);
+        if (ipCheck?.isInfringing && ipCheck.confidence > 0.7) {
+          riskFactors.push(`Potential IP infringement detected (${ipCheck.similarityScore}% similarity)`);
+        }
+      } catch (error) {
+        console.error('IP infringement check failed:', error);
+      }
+    }
 
     console.log(`Identified ${riskFactors.length} risk factors for NFT`);
 
@@ -351,6 +318,30 @@ async function analyzeOwnershipPatterns(
         console.error('Error checking owner contract status:', error);
       }
     }
+
+    // Use BitScrunch wallet behavior analysis for enhanced insights
+    try {
+      const walletBehavior = await analyzeBitScrunchWalletBehavior(owner);
+      if (walletBehavior) {
+        if (walletBehavior.riskScore > 70) {
+          risks.push('High-risk wallet owner profile detected');
+        }
+        
+        // Add specific suspicious activities
+        if (walletBehavior.suspiciousActivity.length > 0) {
+          risks.push(...walletBehavior.suspiciousActivity.map(activity => 
+            `Wallet activity: ${activity}`
+          ));
+        }
+        
+        // Check for gaming-related activities which might indicate bot behavior
+        if (walletBehavior.gamingActivity) {
+          risks.push('Wallet shows gaming activity patterns (verify legitimacy)');
+        }
+      }
+    } catch (error) {
+      console.error('BitScrunch wallet analysis failed:', error);
+    }
     
   } catch (error) {
     console.error('Error analyzing ownership patterns:', error);
@@ -366,16 +357,131 @@ async function analyzeTradingPatterns(
   const risks: string[] = [];
   
   try {
-    // In a production environment, this would analyze trading history
-    // For now, we'll implement basic checks that can be done with available data
+    console.log('Analyzing trading patterns with BitScrunch forensic capabilities...');
     
-    // Check if this is a recently minted token (would require more complex analysis)
-    // This is a placeholder for more sophisticated trading pattern analysis
+    // Use BitScrunch for comprehensive trading pattern analysis
+    const tradingPatterns = await analyzeBitScrunchTradingPatterns(contractAddress, tokenId);
     
-    console.log('Trading pattern analysis would require historical transaction data');
+    if (tradingPatterns) {
+      // Check for wash trading
+      if (tradingPatterns.washTradingDetected) {
+        risks.push('Wash trading patterns detected by BitScrunch AI');
+      }
+      
+      // Check for volume manipulation
+      if (tradingPatterns.volumeManipulation) {
+        risks.push('Volume manipulation detected');
+      }
+      
+      // Check for price manipulation
+      if (tradingPatterns.priceManipulation) {
+        risks.push('Price manipulation patterns identified');
+      }
+      
+      // Check for rapid successive transfers
+      if (tradingPatterns.rapidSuccessiveTransfers) {
+        risks.push('Rapid successive transfers detected (potential pump scheme)');
+      }
+      
+      // Check for suspicious timing patterns
+      if (tradingPatterns.suspiciousTimingPatterns) {
+        risks.push('Suspicious trading timing patterns detected');
+      }
+      
+      // Check for cross-platform arbitrage
+      if (tradingPatterns.crossPlatformArbitrage) {
+        risks.push('Cross-platform arbitrage activity detected');
+      }
+    } else {
+      // Fallback analysis when BitScrunch is not available
+      console.log('BitScrunch trading analysis not available, using basic pattern detection');
+      
+      // Basic pattern detection (placeholder for when BitScrunch API is not available)
+      // In production, this would analyze recent transactions using blockchain data
+      const recentTransactionAnalysis = await analyzeRecentTransactions(contractAddress, tokenId);
+      risks.push(...recentTransactionAnalysis);
+    }
+    
+    // Get BitScrunch price estimation for additional insights
+    try {
+      const priceEstimation = await getBitScrunchPriceEstimation(contractAddress, tokenId);
+      if (priceEstimation) {
+        if (priceEstimation.confidence < 0.3) {
+          risks.push('Low price estimation confidence - market may be manipulated');
+        }
+        
+        if (priceEstimation.methodology === 'insufficient_data') {
+          risks.push('Insufficient trading data for reliable price estimation');
+        }
+      }
+    } catch (error) {
+      console.error('Price estimation failed:', error);
+    }
     
   } catch (error) {
     console.error('Error analyzing trading patterns:', error);
+    risks.push('Unable to complete comprehensive trading pattern analysis');
+  }
+  
+  return risks;
+}
+
+// Basic transaction analysis fallback function
+async function analyzeRecentTransactions(
+  contractAddress: string,
+  tokenId: string
+): Promise<string[]> {
+  const risks: string[] = [];
+  
+  try {
+    // This would ideally use Etherscan API or similar to get recent transactions
+    // For now, we'll implement basic checks that can be done with available data
+    
+    if (process.env.ETHERSCAN_API_KEY) {
+      // Get recent transactions for this NFT contract
+      try {
+        const response = await axios.get(
+          `https://api.etherscan.io/api?module=account&action=tokennfttx&contractaddress=${contractAddress}&page=1&offset=100&sort=desc&apikey=${process.env.ETHERSCAN_API_KEY}`,
+          { timeout: 10000 }
+        );
+        
+        if (response.data.result) {
+          const transactions = response.data.result.filter((tx: any) => tx.tokenID === tokenId);
+          
+          // Analyze transaction patterns
+          if (transactions.length > 10) {
+            const recentTxs = transactions.slice(0, 10);
+            const uniqueAddresses = new Set();
+            let rapidTransfers = 0;
+            
+            for (let i = 0; i < recentTxs.length - 1; i++) {
+              uniqueAddresses.add(recentTxs[i].from);
+              uniqueAddresses.add(recentTxs[i].to);
+              
+              // Check for rapid transfers (within 24 hours)
+              const timeDiff = parseInt(recentTxs[i].timeStamp) - parseInt(recentTxs[i + 1].timeStamp);
+              if (timeDiff < 86400) { // 24 hours
+                rapidTransfers++;
+              }
+            }
+            
+            // Check for potential wash trading indicators
+            if (uniqueAddresses.size < transactions.length * 0.5) {
+              risks.push('Limited unique addresses in recent transactions (potential wash trading)');
+            }
+            
+            if (rapidTransfers > 3) {
+              risks.push('Multiple rapid transfers detected (potential market manipulation)');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching transaction data:', error);
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error in basic transaction analysis:', error);
   }
   
   return risks;

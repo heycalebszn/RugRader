@@ -16,7 +16,8 @@ import {
   getWalletTokens,
   getWalletNFTs,
   fetchNFTMetadata,
-  KNOWN_SAFE_TOKENS
+  KNOWN_SAFE_TOKENS,
+  analyzeBitScrunchWalletBehavior
 } from '@/lib/blockchain';
 
 export async function POST(request: NextRequest) {
@@ -204,7 +205,18 @@ async function analyzeWalletNFTs(provider: ethers.JsonRpcProvider, walletAddress
   const nfts: NFTInfo[] = [];
   
   try {
-    console.log('Fetching wallet NFTs...');
+    console.log('Fetching wallet NFTs with BitScrunch integration...');
+    
+    // Get overall wallet behavior analysis from BitScrunch first
+    let walletBehaviorData = null;
+    try {
+      walletBehaviorData = await analyzeBitScrunchWalletBehavior(walletAddress);
+      if (walletBehaviorData) {
+        console.log(`BitScrunch wallet risk score: ${walletBehaviorData.riskScore}`);
+      }
+    } catch (error) {
+      console.error('BitScrunch wallet behavior analysis failed:', error);
+    }
     
     // Get NFTs from external APIs (Moralis/Alchemy)
     const externalNFTs = await getWalletNFTs(walletAddress);
@@ -225,8 +237,28 @@ async function analyzeWalletNFTs(provider: ethers.JsonRpcProvider, walletAddress
             metadata = await fetchNFTMetadata(nftData.token_uri);
           }
 
-          // Analyze risk factors
-          const riskFactors = analyzeNFTRisk(nftData, metadata);
+          // Use enhanced BitScrunch-powered risk analysis
+          const riskFactors = await analyzeNFTRisk(nftData, metadata, contractAddress, tokenId.toString());
+          
+          // Add wallet-specific risk factors from BitScrunch analysis
+          if (walletBehaviorData) {
+            if (walletBehaviorData.riskScore > 70) {
+              riskFactors.push('Wallet owner has high risk profile');
+            }
+            
+            // Add gaming activity insights
+            if (walletBehaviorData.gamingActivity) {
+              riskFactors.push('Wallet shows gaming activity patterns');
+            }
+            
+            // Add trading pattern insights
+            if (walletBehaviorData.tradingPatterns.length > 0) {
+              riskFactors.push(...walletBehaviorData.tradingPatterns.map(pattern => 
+                `Trading pattern: ${pattern}`
+              ));
+            }
+          }
+          
           const riskLevel = riskFactors.length >= 3 ? 'high' : 
                            riskFactors.length >= 1 ? 'medium' : 'low';
 
@@ -241,11 +273,12 @@ async function analyzeWalletNFTs(provider: ethers.JsonRpcProvider, walletAddress
             metadata: {
               ...metadata,
               collection: nftData.collection?.name || 'Unknown Collection',
-              verified: nftData.collection?.verified || false
+              verified: nftData.collection?.verified || false,
+              walletRiskScore: walletBehaviorData?.riskScore || 0
             }
           });
 
-          console.log(`Added NFT: ${metadata?.name || `#${tokenId}`}`);
+          console.log(`Added NFT: ${metadata?.name || `#${tokenId}`} (${riskLevel} risk)`);
         } catch (error) {
           console.error(`Error analyzing NFT:`, error);
           continue;

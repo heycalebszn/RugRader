@@ -1,280 +1,226 @@
-# Web3 Risk Analyzer
+# 🔍 Advanced Crypto Risk Analyzer
 
-A comprehensive Web3 security analysis platform that analyzes Ethereum wallets, NFT collections, and individual NFTs for security risks and suspicious activities using **real blockchain data only** - no mock or static data.
+A comprehensive blockchain security and risk analysis platform that analyzes NFTs, tokens, collections, and wallets using **real blockchain data** and **AI-powered insights from BitScrunch** - our hackathon sponsor providing cutting-edge NFT analytics and forensic capabilities.
 
-## 🚀 Features
+## 🌟 Key Features
 
-### 1. **Wallet Risk Scanner**
-- **Real-time blockchain analysis** using ethers.js and external APIs
-- **Token risk assessment** with live price data from CoinGecko
-- **NFT portfolio analysis** with metadata verification
-- **Comprehensive risk scoring** based on multiple factors
-- **Integration with Moralis and Alchemy APIs** for complete token/NFT data
+### 🎯 **BitScrunch AI Integration** (Hackathon Sponsor)
+- **Advanced NFT Analytics**: AI-powered price estimation and market analysis
+- **Forensic Data Analysis**: Detect wash trading, volume manipulation, and fraud
+- **IP Infringement Detection**: Protect intellectual property with AI image analysis
+- **Wallet Behavior Analytics**: Gaming patterns and trading behavior insights
+- **Multi-chain Support**: Comprehensive blockchain analytics across networks
 
-### 2. **NFT Collection Analyzer**
-- **Live holder distribution analysis** from blockchain data
-- **Floor price tracking** via OpenSea and marketplace APIs
-- **Smart contract verification** through Etherscan
-- **Whale concentration detection** and risk assessment
-- **Audit status verification** against known databases
+### 🛡️ **Core Security Features**
+- **NFT Risk Analysis**: Metadata integrity, ownership patterns, trading history
+- **Token Risk Assessment**: Smart contract analysis, price volatility, market manipulation
+- **Collection Auditing**: Holder distribution, floor price analysis, creation date verification
+- **Wallet Security Scanning**: Portfolio risk assessment, suspicious activity detection
 
-### 3. **Individual NFT Analyzer**
-- **Real metadata verification** with IPFS support
-- **Ownership verification** through blockchain queries
-- **Collection reputation scoring** based on verification status
-- **Suspicious pattern detection** in metadata and ownership
-- **Contract verification status** checking
+### 📊 **Real Data Sources**
+- **BitScrunch Network**: Advanced AI analytics and forensic data
+- **Blockchain RPCs**: Direct smart contract interactions
+- **Moralis API**: Multi-chain data aggregation
+- **Alchemy API**: Enhanced blockchain data access
+- **Etherscan API**: Contract verification and transaction history
+- **OpenSea API**: Market data and collection statistics
 
-## 🛠️ Technology Stack
+## 🚀 Quick Start
 
-- **Next.js 15** - Full-stack React framework with API routes
-- **ethers.js v6** - Ethereum blockchain interaction
-- **TypeScript** - Type-safe development
-- **Axios** - HTTP client with retry logic and error handling
-- **External APIs**: Moralis, Alchemy, OpenSea, Etherscan, CoinGecko
+### Prerequisites
+- Node.js 18+
+- BitScrunch API key (required for advanced features)
+- Optional: Moralis, Alchemy, Etherscan API keys for enhanced data
 
-## ⚙️ Setup Instructions
+### Installation
 
-### 1. Environment Configuration
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd crypto-risk-analyzer
+   ```
 
-Create a `.env.local` file in the root directory:
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-```bash
-# Required: Ethereum RPC URL (free public endpoint provided)
-ETHEREUM_RPC_URL=https://ethereum-rpc.publicnode.com
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   **Required for BitScrunch integration:**
+   ```env
+   BITSCRUNCH_API_KEY=your_bitscrunch_api_key_here
+   BITSCRUNCH_API_URL=https://api.bitscrunch.com
+   ```
 
-# For better performance, use a dedicated RPC provider:
-# ETHEREUM_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY
-# ETHEREUM_RPC_URL=https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-# Optional but recommended for comprehensive data:
-MORALIS_API_KEY=your_moralis_api_key_here
-ALCHEMY_API_KEY=your_alchemy_api_key_here
-OPENSEA_API_KEY=your_opensea_api_key_here
-ETHERSCAN_API_KEY=your_etherscan_api_key_here
-COINGECKO_API_KEY=your_coingecko_api_key_here
-```
+5. **Visit http://localhost:3000**
 
-### 2. Install Dependencies
+## 🔧 API Endpoints
 
-```bash
-npm install
-```
-
-### 3. Start Development Server
-
-```bash
-npm run dev
-```
-
-The application will be available at `http://localhost:3000`
-
-## 📚 API Documentation
-
-### Wallet Scanner API
-
-**Endpoint:** `POST /api/wallet-scan`
-
-**Request Body:**
-```json
-{
-  "address": "0x742d35Cc6634C0532925a3b8D4C0C3c6c8C8C6C6"
-}
-```
-
-**Response:**
-```json
-{
-  "address": "0x742d35Cc6634C0532925a3b8D4C0C3c6c8C8C6C6",
-  "ethBalance": "1.2345",
-  "tokens": [
-    {
-      "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-      "name": "Tether USD",
-      "symbol": "USDT",
-      "decimals": 6,
-      "balance": "1000.0",
-      "price": 1.00,
-      "riskLevel": "low",
-      "riskFactors": []
-    }
-  ],
-  "nfts": [
-    {
-      "contractAddress": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-      "tokenId": "1234",
-      "name": "Bored Ape #1234",
-      "description": "A Bored Ape Yacht Club NFT",
-      "image": "ipfs://...",
-      "riskLevel": "low",
-      "riskFactors": [],
-      "metadata": {
-        "collection": "Bored Ape Yacht Club",
-        "verified": true,
-        "owner": "0x...",
-        "attributes": [...]
-      }
-    }
-  ],
-  "riskScore": 15,
-  "riskLevel": "medium",
-  "summary": "Wallet analysis complete. Found 0 risky tokens and 0 flagged NFTs."
-}
-```
-
-### Collection Risk Analyzer API
-
-**Endpoint:** `POST /api/collection-check`
-
-**Request Body:**
-```json
-{
-  "contractAddress": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D"
-}
-```
-
-**Response:**
-```json
-{
-  "contractAddress": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-  "name": "Bored Ape Yacht Club",
-  "totalSupply": 10000,
-  "floorPrice": 12.5,
-  "holderCount": 6500,
-  "topHolders": [
-    {
-      "address": "0x1111111111111111111111111111111111111111",
-      "count": 156,
-      "percentage": 1.56
-    }
-  ],
-  "riskLevel": "low",
-  "riskFactors": [],
-  "auditStatus": "passed"
-}
-```
-
-### NFT Analyzer API
-
+### 🎨 NFT Analysis
 **Endpoint:** `POST /api/nft-analyzer`
 
-**Request Body:**
+Enhanced with BitScrunch AI capabilities:
+- **Trading Pattern Analysis**: Detect wash trading and market manipulation
+- **Price Estimation**: AI-powered value assessment with confidence scores  
+- **IP Infringement Check**: Protect against copyright violations
+- **Forensic Metadata Analysis**: Verify authenticity and detect manipulation
+
 ```json
 {
-  "contractAddress": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
+  "contractAddress": "0x...",
   "tokenId": "1234"
 }
 ```
 
-**Response:**
+### 💰 Token Risk Assessment  
+**Endpoint:** `POST /api/token-analyzer`
+
 ```json
 {
-  "contractAddress": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-  "tokenId": "1234",
-  "name": "Bored Ape #1234",
-  "description": "A unique Bored Ape NFT",
-  "image": "ipfs://...",
-  "riskLevel": "low",
-  "riskFactors": [],
-  "metadata": {
-    "owner": "0x...",
-    "tokenURI": "ipfs://...",
-    "collection": "Bored Ape Yacht Club",
-    "verified": true,
-    "attributes": [...],
-    "lastAnalyzed": "2024-01-01T00:00:00.000Z"
-  }
+  "tokenAddress": "0x..."
 }
 ```
 
-## 🔧 Architecture Overview
+### 🏛️ Collection Analysis
+**Endpoint:** `POST /api/collection-check`
 
-### Core Components
+BitScrunch-powered collection forensics:
+- **Volume Manipulation Detection**: Identify artificial trading activity
+- **Cross-platform Analysis**: Monitor activity across multiple marketplaces
+- **Coordinated Trading Detection**: Spot suspicious timing patterns
+- **Market Stability Assessment**: Confidence scoring for price estimates
 
-1. **`src/lib/blockchain.ts`** - Blockchain utilities with real API integrations
-2. **`src/app/api/wallet-scan/route.ts`** - Wallet analysis endpoint
-3. **`src/app/api/collection-check/route.ts`** - Collection analysis endpoint  
-4. **`src/app/api/nft-analyzer/route.ts`** - NFT analysis endpoint
-5. **`src/app/page.tsx`** - Enhanced frontend with three analysis modes
+```json
+{
+  "contractAddress": "0x..."
+}
+```
 
-### Real Data Sources
+### 👤 Wallet Security Scan
+**Endpoint:** `POST /api/wallet-scan`
 
-- **Ethereum Blockchain**: Direct contract calls via ethers.js
-- **Moralis API**: Comprehensive token and NFT data
-- **Alchemy API**: Fallback for token/NFT data
-- **OpenSea API**: Floor prices and collection stats
-- **Etherscan API**: Contract verification and creation dates
-- **CoinGecko API**: Real-time token pricing
+Enhanced with BitScrunch wallet behavior analytics:
+- **Gaming Activity Detection**: Identify bot-like behaviors
+- **Trading Pattern Analysis**: Sophisticated fraud detection
+- **Risk Scoring**: Comprehensive wallet profile assessment
+- **Multi-chain Insights**: Cross-chain activity correlation
 
-### Risk Assessment Algorithm
+```json
+{
+  "address": "0x..."
+}
+```
 
-The system uses a multi-factor risk assessment approach:
+## 🏗️ Architecture
 
-**Token Risk Factors:**
-- Known high-volatility tokens
-- Contract verification status
-- Suspicious naming patterns
-- Token symbol anomalies
+### Frontend Stack
+- **Next.js 15**: React framework with App Router
+- **TypeScript**: Type-safe development
+- **Tailwind CSS**: Utility-first styling
+- **Framer Motion**: Smooth animations
+- **Lucide Icons**: Modern icon library
 
-**NFT Risk Factors:**
-- Metadata accessibility and integrity
-- Collection verification status
-- Suspicious ownership patterns
-- Contract verification
+### Backend Integration
+- **BitScrunch Network**: AI-enhanced blockchain analytics
+- **Ethers.js**: Ethereum interaction library
+- **Axios**: HTTP client for API requests
+- **Multi-API Fallbacks**: Redundant data sources for reliability
 
-**Collection Risk Factors:**
-- Holder concentration analysis
-- Recent creation detection
-- Contract verification status
-- Trading volume analysis
+### Key Features
+- **Real-time Analysis**: Live blockchain data processing
+- **AI-Powered Insights**: BitScrunch machine learning models
+- **Forensic Capabilities**: Advanced fraud detection
+- **Multi-chain Support**: Ethereum and Solana compatibility
+- **Responsive Design**: Mobile-optimized interface
 
-## 🚦 Error Handling & Resilience
+## 🎯 BitScrunch Integration Benefits
 
-- **Retry Logic**: All API calls include automatic retry with exponential backoff
-- **Fallback Systems**: Multiple data sources with automatic failover
-- **Rate Limit Protection**: Built-in handling for API rate limits
-- **Graceful Degradation**: System continues to function even if some APIs fail
-- **Comprehensive Logging**: Detailed error logging for debugging
+### For NFT Marketplaces
+- **Comprehensive Market Analytics**: Trading volumes, price trends, holder statistics
+- **Fraud Prevention**: Real-time wash trading and manipulation detection
+- **Price Discovery**: AI-powered fair value estimation
+- **User Protection**: IP infringement and authenticity verification
+
+### For NFT Lending Protocols  
+- **Risk Assessment**: AI-powered collateral valuation
+- **Market Analysis**: Deep liquidity and volatility insights
+- **Portfolio Evaluation**: Comprehensive asset risk profiling
+- **Default Prediction**: Advanced risk modeling capabilities
+
+### For Gaming Projects
+- **User Acquisition**: Wallet behavior and gaming pattern analysis
+- **Bot Detection**: Identify automated and suspicious activities
+- **Community Insights**: Player engagement and retention analytics
+- **Fraud Prevention**: Protect against gaming exploits and manipulation
+
+### For Creators and Brands
+- **IP Protection**: AI-powered copyright infringement detection
+- **Market Intelligence**: Competitive analysis and trend identification
+- **Authentication**: Verify original works and detect counterfeits
+- **Brand Safety**: Monitor unauthorized use of intellectual property
 
 ## 🔒 Security Features
 
-- **No Private Keys**: The system only reads from the blockchain
-- **Input Validation**: All addresses and inputs are validated
-- **API Key Protection**: Environment variables for sensitive data
-- **CORS Configuration**: Proper cross-origin request handling
-- **Rate Limiting**: Protection against API abuse
+### Advanced Risk Detection
+- **AI-Powered Analysis**: BitScrunch machine learning models
+- **Pattern Recognition**: Sophisticated fraud detection algorithms
+- **Cross-Reference Validation**: Multiple data source verification
+- **Real-time Monitoring**: Continuous threat assessment
 
-## 📈 Production Considerations
+### Data Protection
+- **API Key Security**: Secure credential management
+- **Rate Limiting**: Protection against abuse
+- **Error Handling**: Graceful failure management
+- **Privacy Compliance**: Data protection best practices
 
-For production deployment:
+## 📈 Performance Optimizations
 
-1. **API Keys**: Obtain API keys for Moralis, Alchemy, OpenSea, Etherscan, and CoinGecko
-2. **Database Integration**: Consider adding a database for caching analysis results
-3. **Redis Caching**: Implement caching for frequently accessed data
-4. **Load Balancing**: Scale across multiple instances
-5. **Monitoring**: Add comprehensive logging and analytics
-6. **Rate Limiting**: Implement proper API rate limiting for your endpoints
+- **Parallel API Calls**: Concurrent data fetching
+- **Intelligent Caching**: Reduced API call overhead
+- **Fallback Systems**: Multiple data source redundancy
+- **Error Recovery**: Automatic retry mechanisms
+- **Progressive Loading**: Enhanced user experience
 
-## 🎯 Key Features
+## 🤝 Contributing
 
-✅ **100% Real Data** - No mock or static data anywhere in the system  
-✅ **Multi-API Integration** - Moralis, Alchemy, OpenSea, Etherscan, CoinGecko  
-✅ **Comprehensive Error Handling** - Retry logic, fallbacks, graceful degradation  
-✅ **Real-time Analysis** - Live blockchain data and market prices  
-✅ **Advanced Risk Assessment** - Multi-factor scoring algorithms  
-✅ **Modern UI** - Clean, responsive interface with three analysis modes  
+We welcome contributions! This project showcases the power of BitScrunch's API for advanced blockchain analytics.
 
-## 🚀 Getting Started
+### Development Guidelines
+1. **API Integration**: Leverage BitScrunch capabilities where possible
+2. **Error Handling**: Implement comprehensive fallback mechanisms  
+3. **Performance**: Optimize for real-time analysis requirements
+4. **Security**: Follow blockchain security best practices
+5. **Documentation**: Maintain clear API documentation
 
-1. Clone the repository
-2. Copy `.env.local` and add your API keys (optional but recommended)
-3. Run `npm install`
-4. Run `npm run dev`
-5. Open `http://localhost:3000`
-6. Start analyzing wallets, collections, and NFTs!
+## 📞 Support
 
-The system works with just the free public RPC endpoint, but adding API keys will significantly improve performance and data coverage.
+- **BitScrunch Documentation**: [BitScrunch API Catalog](https://bitscrunch.com/api-catalog)
+- **Community**: Join the BitScrunch community for support
+- **Issues**: Report bugs and feature requests via GitHub Issues
+- **Hackathon**: Built for the BitScrunch hackathon - showcasing advanced NFT analytics
+
+## 🏆 Hackathon Highlights
+
+This project demonstrates the comprehensive capabilities of BitScrunch's API:
+
+- ✅ **AI-Powered NFT Analytics**: Advanced price estimation and market analysis
+- ✅ **Forensic Data Integration**: Wash trading and fraud detection
+- ✅ **IP Protection**: Copyright infringement detection for creators
+- ✅ **Gaming Analytics**: Wallet behavior and bot detection
+- ✅ **Multi-chain Support**: Ethereum and Solana compatibility
+- ✅ **Real Production Use**: No mock data - 100% real blockchain analysis
+- ✅ **Scalable Architecture**: Ready for enterprise deployment
+- ✅ **Comprehensive Security**: Advanced risk assessment capabilities
 
 ---
 
-**Built with ❤️ for Web3 security and transparency**
+**Powered by BitScrunch** - The leading provider of decentralized blockchain analytics and AI-enhanced NFT data. Thank you to BitScrunch for sponsoring this hackathon and providing access to cutting-edge blockchain forensics technology!

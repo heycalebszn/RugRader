@@ -7,7 +7,10 @@ import {
   ERC721_ABI,
   CollectionInfo,
   calculateCollectionRisk,
-  getCollectionStats
+  getCollectionStats,
+  analyzeBitScrunchTradingPatterns,
+  getBitScrunchPriceEstimation,
+  checkBitScrunchIPInfringement
 } from '@/lib/blockchain';
 
 export async function POST(request: NextRequest) {
@@ -247,6 +250,10 @@ async function analyzeCollectionRiskFactors(
   const riskFactors: string[] = [];
   
   try {
+    console.log('Analyzing collection risk factors with BitScrunch integration...');
+    
+    // Start with basic risk analysis
+    
     // Analyze holder concentration
     if (holderAnalysis.topHolders.length > 0) {
       const topHolderPercentage = holderAnalysis.topHolders
@@ -290,6 +297,56 @@ async function analyzeCollectionRiskFactors(
       }
     }
 
+    // Use BitScrunch for advanced collection-level analysis
+    try {
+      // Analyze trading patterns for a representative token (token #1 if it exists)
+      const tradingPatterns = await analyzeBitScrunchTradingPatterns(contractAddress, '1');
+      
+      if (tradingPatterns) {
+        if (tradingPatterns.washTradingDetected) {
+          riskFactors.push('BitScrunch AI detected wash trading patterns in collection');
+        }
+        
+        if (tradingPatterns.volumeManipulation) {
+          riskFactors.push('Collection shows signs of volume manipulation');
+        }
+        
+        if (tradingPatterns.priceManipulation) {
+          riskFactors.push('Price manipulation detected across collection');
+        }
+        
+        if (tradingPatterns.suspiciousTimingPatterns) {
+          riskFactors.push('Suspicious coordinated trading timing detected');
+        }
+        
+        if (tradingPatterns.crossPlatformArbitrage) {
+          riskFactors.push('Unusual cross-platform arbitrage activity');
+        }
+      }
+      
+      // Get price estimation confidence for the collection
+      const priceEstimation = await getBitScrunchPriceEstimation(contractAddress, '1');
+      if (priceEstimation && priceEstimation.confidence < 0.3) {
+        riskFactors.push('Low price estimation confidence - market instability detected');
+      }
+      
+    } catch (error) {
+      console.error('BitScrunch collection analysis failed:', error);
+      riskFactors.push('Unable to complete advanced collection forensics');
+    }
+
+    // Check for potential IP infringement if we have external data with images
+    try {
+      if (externalStats?.collection?.image_url) {
+        const ipCheck = await checkBitScrunchIPInfringement(externalStats.collection.image_url, contractAddress);
+        if (ipCheck?.isInfringing && ipCheck.confidence > 0.8) {
+          riskFactors.push(`Collection artwork may infringe IP rights (${ipCheck.similarityScore}% similarity)`);
+        }
+      }
+    } catch (error) {
+      console.error('IP infringement check failed for collection:', error);
+    }
+
     // Check contract verification status
     if (process.env.ETHERSCAN_API_KEY) {
       try {
@@ -306,7 +363,7 @@ async function analyzeCollectionRiskFactors(
       }
     }
 
-    console.log(`Identified ${riskFactors.length} risk factors for collection`);
+    console.log(`Identified ${riskFactors.length} risk factors for collection (including BitScrunch analysis)`);
     
   } catch (error) {
     console.error('Error analyzing collection risk factors:', error);
