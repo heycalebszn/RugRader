@@ -98,7 +98,7 @@ export default function NftAnalyzerPage() {
         NFT Analyzer
       </h1>
       <p className="text-neutral-500 dark:text-neutral-400">
-        Enter a contract address and token ID to analyze an NFT's metadata and
+        Enter a contract address and token ID to analyze an NFT&apos;s metadata and
         risk.
       </p>
 

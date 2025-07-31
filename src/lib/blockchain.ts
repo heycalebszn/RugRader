@@ -13,6 +13,16 @@ export interface TokenInfo {
   riskFactors: string[];
 }
 
+export interface NFTMetadata {
+  name?: string;
+  description?: string;
+  image?: string;
+  attributes?: Array<{ trait_type: string; value: string | number }>;
+  external_url?: string;
+  animation_url?: string;
+  [key: string]: unknown;
+}
+
 export interface NFTInfo {
   contractAddress: string;
   tokenId: string;
@@ -21,7 +31,7 @@ export interface NFTInfo {
   image?: string;
   riskLevel: 'low' | 'medium' | 'high';
   riskFactors: string[];
-  metadata?: any;
+  metadata?: NFTMetadata;
 }
 
 export interface CollectionInfo {
@@ -46,13 +56,73 @@ export interface WalletAnalysis {
   summary: string;
 }
 
+// API response types
+export interface MoralisTokenResponse {
+  token_address: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  balance: string;
+  [key: string]: unknown;
+}
+
+export interface MoralisNFTResponse {
+  token_address: string;
+  token_id: string;
+  name?: string;
+  metadata?: NFTMetadata;
+  [key: string]: unknown;
+}
+
+export interface AlchemyTokenResponse {
+  contractAddress: string;
+  name: string;
+  symbol: string;
+  decimals: number;
+  balance: string;
+  [key: string]: unknown;
+}
+
+export interface AlchemyNFTResponse {
+  contract: {
+    address: string;
+  };
+  id: {
+    tokenId: string;
+  };
+  title?: string;
+  metadata?: NFTMetadata;
+  [key: string]: unknown;
+}
+
+export interface TokenInfoData {
+  name?: string;
+  symbol?: string;
+  decimals?: number;
+  totalSupply?: string;
+  [key: string]: unknown;
+}
+
+export interface NFTData {
+  contractAddress: string;
+  tokenId: string;
+  name?: string;
+  metadata?: NFTMetadata;
+  [key: string]: unknown;
+}
+
+interface AlchemyTokenBalance {
+  tokenBalance: string;
+  [key: string]: unknown;
+}
+
 // Initialize providers
 export function getProvider(): ethers.JsonRpcProvider {
   const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://ethereum-rpc.publicnode.com';
   const provider = new ethers.JsonRpcProvider(rpcUrl);
   
   // Add connection error handling
-  provider.on('error', (error) => {
+  provider.on('error', (error: Error) => {
     console.error('RPC Provider error:', error);
   });
   
@@ -164,8 +234,8 @@ export async function fetchTokenPrice(tokenAddress: string): Promise<number | nu
       );
       
       return response.data[tokenAddress.toLowerCase()]?.usd || null;
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
         throw new Error('Rate limit exceeded for CoinGecko API');
       }
       throw error;
@@ -177,7 +247,7 @@ export async function fetchTokenPrice(tokenAddress: string): Promise<number | nu
 }
 
 // Enhanced NFT metadata fetching with error handling
-export async function fetchNFTMetadata(tokenURI: string): Promise<any> {
+export async function fetchNFTMetadata(tokenURI: string): Promise<NFTMetadata | null> {
   if (!tokenURI || tokenURI === '') {
     return null;
   }
@@ -195,8 +265,8 @@ export async function fetchNFTMetadata(tokenURI: string): Promise<any> {
         maxRedirects: 3
       });
       return response.data;
-    } catch (error: any) {
-      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')) {
         throw new Error('Metadata fetch timeout');
       }
       throw error;
@@ -208,7 +278,7 @@ export async function fetchNFTMetadata(tokenURI: string): Promise<any> {
 }
 
 // Enhanced Moralis API calls with error handling
-export async function getWalletTokens(walletAddress: string): Promise<any[]> {
+export async function getWalletTokens(walletAddress: string): Promise<MoralisTokenResponse[] | AlchemyTokenResponse[]> {
   if (!process.env.MORALIS_API_KEY) {
     console.log('Moralis API key not configured, using Alchemy fallback');
     return getWalletTokensAlchemy(walletAddress);
@@ -227,11 +297,11 @@ export async function getWalletTokens(walletAddress: string): Promise<any[]> {
       );
       
       return response.data.result || [];
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
         throw new Error('Rate limit exceeded for Moralis API');
       }
-      if (error.response?.status === 401) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error('Invalid Moralis API key');
       }
       throw error;
@@ -242,7 +312,7 @@ export async function getWalletTokens(walletAddress: string): Promise<any[]> {
   });
 }
 
-export async function getWalletNFTs(walletAddress: string): Promise<any[]> {
+export async function getWalletNFTs(walletAddress: string): Promise<MoralisNFTResponse[] | AlchemyNFTResponse[]> {
   if (!process.env.MORALIS_API_KEY) {
     console.log('Moralis API key not configured, using Alchemy fallback');
     return getWalletNFTsAlchemy(walletAddress);
@@ -267,11 +337,11 @@ export async function getWalletNFTs(walletAddress: string): Promise<any[]> {
       );
       
       return response.data.result || [];
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
         throw new Error('Rate limit exceeded for Moralis API');
       }
-      if (error.response?.status === 401) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error('Invalid Moralis API key');
       }
       throw error;
@@ -283,7 +353,7 @@ export async function getWalletNFTs(walletAddress: string): Promise<any[]> {
 }
 
 // Enhanced Alchemy API calls with error handling
-export async function getWalletTokensAlchemy(walletAddress: string): Promise<any[]> {
+export async function getWalletTokensAlchemy(walletAddress: string): Promise<AlchemyTokenResponse[]> {
   if (!process.env.ALCHEMY_API_KEY) {
     console.log('No API keys configured, using direct blockchain calls');
     return [];
@@ -307,14 +377,14 @@ export async function getWalletTokensAlchemy(walletAddress: string): Promise<any
       }
 
       if (response.data.result?.tokenBalances) {
-        return response.data.result.tokenBalances.filter((token: any) => 
+        return response.data.result.tokenBalances.filter((token: AlchemyTokenBalance) => 
           token.tokenBalance !== '0x0' && token.tokenBalance !== '0x'
         );
       }
       
       return [];
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
         throw new Error('Rate limit exceeded for Alchemy API');
       }
       throw error;
@@ -325,7 +395,7 @@ export async function getWalletTokensAlchemy(walletAddress: string): Promise<any
   });
 }
 
-export async function getWalletNFTsAlchemy(walletAddress: string): Promise<any[]> {
+export async function getWalletNFTsAlchemy(walletAddress: string): Promise<AlchemyNFTResponse[]> {
   if (!process.env.ALCHEMY_API_KEY) {
     console.log('No API keys configured, using direct blockchain calls');
     return [];
@@ -349,8 +419,8 @@ export async function getWalletNFTsAlchemy(walletAddress: string): Promise<any[]
       }
 
       return response.data.result?.ownedNfts || [];
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
         throw new Error('Rate limit exceeded for Alchemy API');
       }
       throw error;
@@ -362,7 +432,7 @@ export async function getWalletNFTsAlchemy(walletAddress: string): Promise<any[]
 }
 
 // Enhanced collection stats with error handling
-export async function getCollectionStats(contractAddress: string): Promise<any> {
+export async function getCollectionStats(contractAddress: string): Promise<CollectionInfo | null> {
   // Try OpenSea API first
   if (process.env.OPENSEA_API_KEY) {
     try {
@@ -378,7 +448,7 @@ export async function getCollectionStats(contractAddress: string): Promise<any> 
         );
         return response.data;
       }, 2, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('OpenSea API failed:', error);
     }
   }
@@ -398,7 +468,7 @@ export async function getCollectionStats(contractAddress: string): Promise<any> 
         );
         return response.data;
       }, 2, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Moralis collection stats failed:', error);
     }
   }
@@ -410,17 +480,19 @@ export async function getCollectionStats(contractAddress: string): Promise<any> 
 export async function safeContractCall<T>(
   contract: ethers.Contract,
   method: string,
-  ...args: any[]
+  ...args: unknown[]
 ): Promise<T | null> {
   return withRetry(async () => {
     try {
       return await contract[method](...args);
-    } catch (error: any) {
-      if (error.code === 'CALL_EXCEPTION') {
-        throw new Error(`Contract call failed: ${method}`);
-      }
-      if (error.code === 'NETWORK_ERROR') {
-        throw new Error('Network connection error');
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'code' in error) {
+        if (error.code === 'CALL_EXCEPTION') {
+          throw new Error(`Contract call failed: ${method}`);
+        }
+        if (error.code === 'NETWORK_ERROR') {
+          throw new Error('Network connection error');
+        }
       }
       throw error;
     }
@@ -448,7 +520,7 @@ export const KNOWN_SAFE_TOKENS = new Set([
   '0x514910771af9ca656af840dff83e8264ecf986ca', // LINK
 ]);
 
-export function analyzeTokenRisk(tokenAddress: string, tokenInfo: any): string[] {
+export function analyzeTokenRisk(tokenAddress: string, tokenInfo: TokenInfoData): string[] {
   const riskFactors: string[] = [];
   
   if (KNOWN_RISKY_TOKENS.has(tokenAddress.toLowerCase())) {
@@ -477,7 +549,7 @@ export function analyzeTokenRisk(tokenAddress: string, tokenInfo: any): string[]
 }
 
 // Enhanced NFT risk analysis
-export function analyzeBasicNFTRisk(nftData: any, metadata: any): string[] {
+export function analyzeBasicNFTRisk(nftData: NFTData, metadata: NFTMetadata | null): string[] {
   const riskFactors: string[] = [];
   
   // Check metadata integrity
@@ -510,7 +582,7 @@ export function analyzeBasicNFTRisk(nftData: any, metadata: any): string[] {
  * Enhanced NFT risk analysis using BitScrunch forensic data
  * Combines traditional blockchain analysis with AI-powered insights
  */
-export async function analyzeNFTRisk(nftData: any, metadata: any, contractAddress: string, tokenId: string): Promise<string[]> {
+export async function analyzeNFTRisk(nftData: NFTData, metadata: NFTMetadata | null, contractAddress: string, tokenId: string): Promise<string[]> {
   const riskFactors: string[] = [];
   
   // Start with basic risk analysis
@@ -622,7 +694,13 @@ export interface BitScrunchNFTAnalysis {
   };
   walletBehavior: {
     ownerRiskScore: number;
-    tradingHistory: any[];
+    tradingHistory: Array<{
+      timestamp: number;
+      transactionHash: string;
+      type: string;
+      value: number;
+      [key: string]: unknown;
+    }>;
     suspiciousActivity: string[];
   };
 }
@@ -679,11 +757,11 @@ export async function analyzeBitScrunchNFT(
       );
 
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
         throw new Error('BitScrunch API rate limit exceeded');
       }
-      if (error.response?.status === 401) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error('Invalid BitScrunch API key');
       }
       throw error;
@@ -728,8 +806,8 @@ export async function analyzeBitScrunchTradingPatterns(
       );
 
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 429) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
         throw new Error('BitScrunch API rate limit exceeded');
       }
       throw error;
@@ -771,13 +849,13 @@ export async function getBitScrunchPriceEstimation(
       );
 
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
         return { estimatedValue: 0, confidence: 0, methodology: 'insufficient_data' };
       }
       throw error;
     }
-  }, 2, 1500).catch((error) => {
+  }, 3, 2000).catch((error) => {
     console.error('BitScrunch price estimation failed:', error);
     return null;
   });
@@ -821,8 +899,8 @@ export async function analyzeBitScrunchWalletBehavior(
       );
 
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
         return {
           riskScore: 0,
           tradingPatterns: [],
@@ -875,8 +953,8 @@ export async function checkBitScrunchIPInfringement(
       );
 
       return response.data;
-    } catch (error: any) {
-      if (error.response?.status === 404) {
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
         return {
           isInfringing: false,
           similarityScore: 0,

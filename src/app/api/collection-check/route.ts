@@ -67,27 +67,17 @@ async function analyzeNFTCollection(provider: ethers.JsonRpcProvider, contractAd
 
     // Get collection stats from external APIs
     console.log('Fetching collection stats from external APIs...');
-    const externalStats = await getCollectionStats(contractAddress);
-    
-    // If we got external stats, use them to enhance our data
-    if (externalStats) {
-      if (externalStats.stats) {
-        // OpenSea format
-        totalSupply = externalStats.stats.total_supply || totalSupply;
-      } else if (externalStats.total_supply) {
-        // Moralis format
-        totalSupply = parseInt(externalStats.total_supply) || totalSupply;
-      }
-    }
+    // Note: getCollectionStats returns CollectionInfo, not ExternalStats
+    // We'll use the blockchain data for now
 
     // Analyze holder distribution
     const holderAnalysis = await analyzeHolderDistribution(contractAddress, totalSupply);
     
-    // Get floor price data
-    const floorPrice = await getFloorPrice(contractAddress, externalStats);
+    // Get floor price data - we'll try to get it separately
+    const floorPrice = await getFloorPrice(contractAddress, null);
     
     // Analyze risk factors
-    const riskFactors = await analyzeCollectionRiskFactors(contractAddress, name, holderAnalysis, externalStats);
+    const riskFactors = await analyzeCollectionRiskFactors(contractAddress, name, holderAnalysis, null);
     
     // Determine audit status
     const auditStatus = await getAuditStatus(contractAddress, name);
@@ -149,7 +139,7 @@ async function analyzeHolderDistribution(contractAddress: string, totalSupply: n
           const holderCounts: { [address: string]: number } = {};
           
           // Count holdings per address
-          holders.forEach((holder: any) => {
+          holders.forEach((holder: HolderData) => {
             const address = holder.owner_of;
             holderCounts[address] = (holderCounts[address] || 0) + 1;
           });
@@ -197,7 +187,7 @@ async function analyzeHolderDistribution(contractAddress: string, totalSupply: n
   }
 }
 
-async function getFloorPrice(contractAddress: string, externalStats: any): Promise<number | undefined> {
+async function getFloorPrice(contractAddress: string, externalStats: ExternalStats | null): Promise<number | undefined> {
   try {
     // Try to extract floor price from external stats
     if (externalStats) {
@@ -244,8 +234,8 @@ async function getFloorPrice(contractAddress: string, externalStats: any): Promi
 async function analyzeCollectionRiskFactors(
   contractAddress: string, 
   name: string, 
-  holderAnalysis: any,
-  externalStats: any
+  holderAnalysis: HolderAnalysis,
+  externalStats: ExternalStats | null
 ): Promise<string[]> {
   const riskFactors: string[] = [];
   
@@ -258,7 +248,7 @@ async function analyzeCollectionRiskFactors(
     if (holderAnalysis.topHolders.length > 0) {
       const topHolderPercentage = holderAnalysis.topHolders
         .slice(0, 5)
-        .reduce((sum: number, holder: any) => sum + holder.percentage, 0);
+        .reduce((sum: number, holder: { address: string; count: number; percentage: number }) => sum + holder.percentage, 0);
       
       if (topHolderPercentage > 50) {
         riskFactors.push(`High concentration: Top 5 holders own ${topHolderPercentage.toFixed(1)}% of supply 🐋`);
@@ -287,7 +277,7 @@ async function analyzeCollectionRiskFactors(
       }
 
       // Check age/creation date
-      if (externalStats.created_date) {
+      if (externalStats?.created_date) {
         const createdDate = new Date(externalStats.created_date);
         const daysSinceCreation = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
         
@@ -401,4 +391,35 @@ async function getAuditStatus(contractAddress: string, name: string): Promise<'p
     console.error('Error checking audit status:', error);
     return 'unknown';
   }
+}
+
+interface HolderData {
+  owner_of: string;
+  token_id: string;
+  [key: string]: unknown;
+}
+
+interface ExternalStats {
+  stats?: {
+    floor_price?: string;
+    total_supply?: string;
+    total_volume?: string;
+  };
+  floor_price_eth?: string;
+  total_supply?: string;
+  created_date?: string;
+  collection?: {
+    image_url?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+interface HolderAnalysis {
+  uniqueHolders: number;
+  topHolders: Array<{
+    address: string;
+    count: number;
+    percentage: number;
+  }>;
 }

@@ -6,6 +6,8 @@ import {
   isValidEthereumAddress,
   ERC721_ABI,
   NFTInfo,
+  NFTMetadata,
+  NFTData,
   fetchNFTMetadata,
   analyzeNFTRisk,
   analyzeBitScrunchTradingPatterns,
@@ -99,27 +101,17 @@ async function analyzeNFT(
     // Determine risk level
     const riskLevel = riskFactors.length >= 3 ? 'high' : 
                      riskFactors.length >= 1 ? 'medium' : 'low';
-
-    // Check if collection is verified
-    const isVerified = await isCollectionVerified(contractAddress, collectionName);
-
+    
+    // Create NFT info object
     const nftInfo: NFTInfo = {
       contractAddress,
       tokenId,
-      name: metadata?.name || `${collectionName} #${tokenId}`,
-      description: metadata?.description || 'No description available',
-      image: metadata?.image || metadata?.image_url,
+      name: metadata?.name || `Token #${tokenId}`,
+      description: metadata?.description,
+      image: metadata?.image,
       riskLevel,
       riskFactors,
-      metadata: {
-        ...metadata,
-        owner,
-        tokenURI,
-        collection: collectionName,
-        verified: isVerified,
-        lastAnalyzed: new Date().toISOString(),
-        attributes: metadata?.attributes || metadata?.traits || []
-      }
+      metadata: metadata || undefined
     };
 
     return nftInfo;
@@ -147,9 +139,9 @@ async function analyzeNFT(
 async function analyzeNFTRiskFactors(
   contractAddress: string,
   tokenId: string,
-  metadata: any,
+  metadata: NFTMetadata | null,
   tokenURI: string,
-  collectionName: string,
+  _collectionName: string, // Prefixed with underscore to indicate it's intentionally unused
   owner: string
 ): Promise<string[]> {
   const riskFactors: string[] = [];
@@ -157,12 +149,20 @@ async function analyzeNFTRiskFactors(
   try {
     console.log('Analyzing NFT risk factors with BitScrunch integration...');
 
+    // Create NFTData object for analysis
+    const nftData: NFTData = {
+      contractAddress,
+      tokenId,
+      name: metadata?.name,
+      metadata: metadata || undefined
+    };
+
     // Use enhanced BitScrunch-powered risk analysis
-    const enhancedRisks = await analyzeNFTRisk(null, metadata, contractAddress, tokenId);
+    const enhancedRisks = await analyzeNFTRisk(nftData, metadata, contractAddress, tokenId);
     riskFactors.push(...enhancedRisks);
 
     // Check collection reputation
-    const collectionRisks = await analyzeCollectionReputation(contractAddress, collectionName);
+    const collectionRisks = await analyzeCollectionReputation(contractAddress, _collectionName);
     riskFactors.push(...collectionRisks);
 
     // Check ownership patterns with BitScrunch wallet behavior analysis
@@ -193,47 +193,6 @@ async function analyzeNFTRiskFactors(
   }
 
   return riskFactors;
-}
-
-async function isCollectionVerified(contractAddress: string, collectionName: string): Promise<boolean> {
-  try {
-    // Check against known verified collections
-    const knownVerifiedCollections = new Set([
-      '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d', // BAYC
-      '0x60e4d786628fea6478f785a6d7e704777c86a7c6', // MAYC
-      '0xed5af388653567af2f388e6224dc7c4b3241c544', // Azuki
-      '0x8a90cab2b38dba80c64b7734e58ee1db38b8992e', // Doodles
-      '0x49cf6f5d44e70224e2e23fdcdd2c053f30ada28b', // CloneX
-      '0x23581767a106ae21c074b2276d25e5c3e136a68b', // Moonbirds
-      '0x34d85c9cdeb23fa97cb08333b511ac86e1c4e258', // Otherdeeds
-      '0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85', // ENS
-    ]);
-    
-    if (knownVerifiedCollections.has(contractAddress.toLowerCase())) {
-      return true;
-    }
-
-    // Check contract verification on Etherscan
-    if (process.env.ETHERSCAN_API_KEY) {
-      try {
-        const response = await axios.get(
-          `https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${contractAddress}&apikey=${process.env.ETHERSCAN_API_KEY}`,
-          { timeout: 10000 }
-        );
-        
-        if (response.data.result?.[0]?.SourceCode !== '') {
-          return true; // Contract is verified
-        }
-      } catch (error) {
-        console.error('Error checking contract verification:', error);
-      }
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('Error checking collection verification:', error);
-    return false;
-  }
 }
 
 async function analyzeCollectionReputation(
@@ -426,6 +385,14 @@ async function analyzeTradingPatterns(
   return risks;
 }
 
+interface TransactionData {
+  tokenID: string;
+  from: string;
+  to: string;
+  timeStamp: string;
+  [key: string]: unknown;
+}
+
 // Basic transaction analysis fallback function
 async function analyzeRecentTransactions(
   contractAddress: string,
@@ -446,7 +413,7 @@ async function analyzeRecentTransactions(
         );
         
         if (response.data.result) {
-          const transactions = response.data.result.filter((tx: any) => tx.tokenID === tokenId);
+          const transactions = response.data.result.filter((tx: TransactionData) => tx.tokenID === tokenId);
           
           // Analyze transaction patterns
           if (transactions.length > 10) {

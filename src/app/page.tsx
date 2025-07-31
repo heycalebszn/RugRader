@@ -1,18 +1,84 @@
 "use client";
 
 import { useState } from "react";
-import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input"; 
-import { Loader2, Wallet, Image, Grid3X3 } from "lucide-react"; 
-import { cn } from "@/lib/utils"; 
+import { Loader2, Wallet, Image, Grid3X3 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 
 type AnalysisType = 'wallet' | 'collection' | 'nft';
+
+interface WalletResult {
+  address: string;
+  ethBalance: string;
+  riskLevel: string;
+  riskScore: number;
+  tokens: Array<{
+    address: string;
+    name: string;
+    symbol: string;
+    balance: string;
+    price?: number;
+    riskLevel: string;
+    riskFactors: string[];
+  }>;
+  nfts: Array<{
+    contractAddress: string;
+    tokenId: string;
+    name: string;
+    riskLevel: string;
+    riskFactors: string[];
+  }>;
+  summary: string;
+}
+
+interface CollectionResult {
+  contractAddress: string;
+  name: string;
+  totalSupply: number;
+  holderCount: number;
+  floorPrice?: number;
+  riskLevel: string;
+  riskFactors: string[];
+  auditStatus: string;
+  topHolders: Array<{
+    address: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
+interface NFTResult {
+  contractAddress: string;
+  tokenId: string;
+  name: string;
+  description?: string;
+  image?: string;
+  riskLevel: string;
+  riskFactors: string[];
+  metadata?: {
+    collection?: string;
+    verified?: boolean;
+    owner?: string;
+    attributes?: Array<{
+      trait_type?: string;
+      type?: string;
+      value: string | number;
+    }>;
+  };
+}
+
+interface RequestBody {
+  address?: string;
+  contractAddress?: string;
+  tokenId?: string;
+}
 
 export default function Web3AnalyzerPage() {
   const [analysisType, setAnalysisType] = useState<AnalysisType>('wallet');
   const [address, setAddress] = useState("");
   const [tokenId, setTokenId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<WalletResult | CollectionResult | NFTResult | null>(null);
 
   const placeholders = {
     wallet: [
@@ -51,7 +117,7 @@ export default function Web3AnalyzerPage() {
 
     try {
       let endpoint = '';
-      let body: any = {};
+      let body: RequestBody = {};
 
       switch (analysisType) {
         case 'wallet':
@@ -99,7 +165,7 @@ export default function Web3AnalyzerPage() {
     runAnalysis(address, tokenId);
   };
 
-  const formatWalletResult = (data: any) => {
+  const formatWalletResult = (data: WalletResult) => {
     let resultText = `📊 Wallet Analysis Results:\n\n`;
     resultText += `Address: ${data.address}\n`;
     resultText += `ETH Balance: ${parseFloat(data.ethBalance).toFixed(4)} ETH\n`;
@@ -108,7 +174,7 @@ export default function Web3AnalyzerPage() {
     
     if (data.tokens.length > 0) {
       resultText += `🪙 Tokens Found (${data.tokens.length}):\n`;
-      data.tokens.forEach((token: any) => {
+      data.tokens.forEach((token) => {
         resultText += `• ${token.symbol}: ${parseFloat(token.balance).toFixed(2)}`;
         if (token.price) {
           resultText += ` ($${(parseFloat(token.balance) * token.price).toFixed(2)})`;
@@ -123,7 +189,7 @@ export default function Web3AnalyzerPage() {
     
     if (data.nfts.length > 0) {
       resultText += `🖼️ NFTs Found (${data.nfts.length}):\n`;
-      data.nfts.forEach((nft: any) => {
+      data.nfts.forEach((nft) => {
         resultText += `• ${nft.name} (${nft.riskLevel})\n`;
         if (nft.riskFactors.length > 0) {
           resultText += `  ⚠️ ${nft.riskFactors.join(', ')}\n`;
@@ -136,7 +202,7 @@ export default function Web3AnalyzerPage() {
     return resultText;
   };
 
-  const formatCollectionResult = (data: any) => {
+  const formatCollectionResult = (data: CollectionResult) => {
     let resultText = `📊 Collection Analysis Results:\n\n`;
     resultText += `Contract: ${data.contractAddress}\n`;
     resultText += `Name: ${data.name}\n`;
@@ -150,7 +216,7 @@ export default function Web3AnalyzerPage() {
     
     if (data.topHolders.length > 0) {
       resultText += `🐋 Top Holders:\n`;
-      data.topHolders.slice(0, 5).forEach((holder: any, index: number) => {
+      data.topHolders.slice(0, 5).forEach((holder, index) => {
         resultText += `${index + 1}. ${holder.address.slice(0, 6)}...${holder.address.slice(-4)}: ${holder.count} (${holder.percentage.toFixed(1)}%)\n`;
       });
       resultText += '\n';
@@ -158,7 +224,7 @@ export default function Web3AnalyzerPage() {
     
     if (data.riskFactors.length > 0) {
       resultText += `⚠️ Risk Factors:\n`;
-      data.riskFactors.forEach((factor: string) => {
+      data.riskFactors.forEach((factor) => {
         resultText += `• ${factor}\n`;
       });
     }
@@ -166,7 +232,7 @@ export default function Web3AnalyzerPage() {
     return resultText;
   };
 
-  const formatNFTResult = (data: any) => {
+  const formatNFTResult = (data: NFTResult) => {
     let resultText = `📊 NFT Analysis Results:\n\n`;
     resultText += `Contract: ${data.contractAddress}\n`;
     resultText += `Token ID: ${data.tokenId}\n`;
@@ -183,9 +249,9 @@ export default function Web3AnalyzerPage() {
       }
       resultText += `Verified: ${data.metadata.verified ? 'Yes' : 'No'}\n`;
       
-      if (data.metadata.attributes && data.metadata.attributes.length > 0) {
+      if (data.metadata?.attributes && data.metadata.attributes.length > 0) {
         resultText += `\n🎨 Attributes:\n`;
-        data.metadata.attributes.slice(0, 5).forEach((attr: any) => {
+        data.metadata.attributes.slice(0, 5).forEach((attr: { trait_type?: string; type?: string; value: string | number }) => {
           resultText += `• ${attr.trait_type || attr.type}: ${attr.value}\n`;
         });
       }
@@ -194,7 +260,7 @@ export default function Web3AnalyzerPage() {
     
     if (data.riskFactors.length > 0) {
       resultText += `⚠️ Risk Factors:\n`;
-      data.riskFactors.forEach((factor: string) => {
+      data.riskFactors.forEach((factor) => {
         resultText += `• ${factor}\n`;
       });
     }
@@ -207,11 +273,11 @@ export default function Web3AnalyzerPage() {
     
     switch (analysisType) {
       case 'wallet':
-        return formatWalletResult(result);
+        return formatWalletResult(result as WalletResult);
       case 'collection':
-        return formatCollectionResult(result);
+        return formatCollectionResult(result as CollectionResult);
       case 'nft':
-        return formatNFTResult(result);
+        return formatNFTResult(result as NFTResult);
       default:
         return JSON.stringify(result, null, 2);
     }

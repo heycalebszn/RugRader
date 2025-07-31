@@ -5,6 +5,12 @@ import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-van
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface Holder {
+  address: string;
+  count: number;
+  percentage: number;
+}
+
 export default function CollectionCheckPage() {
   const [contract, setContract] = useState("");
   const [loading, setLoading] = useState(false);
@@ -50,7 +56,7 @@ export default function CollectionCheckPage() {
       
       if (data.topHolders.length > 0) {
         resultText += `🐋 Top Holders:\n`;
-        data.topHolders.forEach((holder: any, index: number) => {
+        data.topHolders.forEach((holder: Holder, index: number) => {
           resultText += `${index + 1}. ${holder.address.slice(0, 6)}...${holder.address.slice(-4)}: ${holder.count} tokens (${holder.percentage.toFixed(1)}%)\n`;
         });
         resultText += '\n';
